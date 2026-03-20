@@ -337,7 +337,6 @@ public enum EFileFilterType
     Map
 }
 
-
 public enum EThemeType
 {
     [Description("Dark")]
@@ -356,32 +355,7 @@ public enum EThemeType
     [Icon(MaterialIconKind.CircleOpacity)]
     Mica,
     
-    [Description("FRACTURED")]
-    [Icon(MaterialIconKind.Collage)]
-    FRACTURED,
-    
-    
-    [Description("Forest")]
-    [Icon(MaterialIconKind.Leaf)]
-    Forest,
-
     [Description("ChippyCut")]
     [Icon(MaterialIconKind.Terminal)]
     ChippyCut,
-
-    [Description("ChippyCutPurple")]
-    [Icon(MaterialIconKind.CrystalBall)]
-    ChippyCutPurple,
-
-    [Description("ChippyCutBlue")]
-    [Icon(MaterialIconKind.Creation)]
-    ChippyCutBlue,
-
-    [Description("Heartful")]
-    [Icon(MaterialIconKind.Heart)]
-    Heartful,
-
-    [Description("Sugar")]
-    [Icon(MaterialIconKind.Sparkles)]
-    Sugar,
 }

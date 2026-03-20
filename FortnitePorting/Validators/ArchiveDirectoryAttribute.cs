@@ -20,8 +20,8 @@ public class ArchiveDirectoryAttribute(string? canValidateProperty = null) : Val
             return new ValidationResult("Archive directory must exist.");
 
         var files = Directory.GetFiles(directory);
-        if (!files.Any(file => file.Contains(".pak") || file.Contains(".sig") || file.Contains(".ucas") || file.Contains(".utoc") || file.Contains(".uondemandtoc") || file.Contains(".umeta")))
-            return new ValidationResult("Archive directory must contain valid game files. (*.pak, *.sig, *.ucas, *.utoc, *.uondemandtoc, *.umeta )");
+        if (!files.Any(file => file.Contains(".pak") || file.Contains(".sig") || file.Contains(".ucas") || file.Contains(".utoc")))
+            return new ValidationResult("Archive directory must contain valid game files. (*.pak, *.sig, *.ucas, *.utoc)");
         
         return ValidationResult.Success;
     }
