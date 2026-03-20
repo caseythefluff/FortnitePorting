@@ -31,13 +31,13 @@ Download the latest release from [Releases](../../releases/latest), the [Discord
 Clone the repository along with all submodules:
 
 ```
-git clone https://github.com/h4lfheart/FortnitePorting --recursive
+git clone https://github.com/Caseythefluff/FortnitePorting --recursive
 ```
 
 Then publish from the project directory:
 
 ```
-dotnet publish FortnitePorting -c Release --no-self-contained -r win-x64 -o "./Release" -p:PublishSingleFile=true -p:DebugType=None -p:DebugSymbols=false -p:IncludeNativeLibrariesForSelfExtract=true
+dotnet publish FortnitePorting -c Release --self-contained -r win-x64 -o "./Release" -p:PublishSingleFile=true -p:DebugType=None -p:DebugSymbols=false -p:IncludeNativeLibrariesForSelfExtract=true
 ```
 
 > [!NOTE]
