@@ -1488,6 +1488,7 @@ class GradientMappings(MappingCollection):
 
     switches=(
         SlotMapping("use Alpha Channel as mask", "Use Layer Mask Alpha"),
+        SlotMapping("useGmapGradientLayers"),
         SlotMapping("useGmapGradientLayers", "Use Gmap Gradient Layers")
     )
 

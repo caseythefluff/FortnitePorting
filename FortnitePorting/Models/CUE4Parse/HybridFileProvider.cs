@@ -4,7 +4,6 @@ using System.IO;
 using System.Linq;
 using CUE4Parse.FileProvider.Vfs;
 using CUE4Parse.UE4.IO;
-using CUE4Parse.UE4.IO.OnDemand;
 using CUE4Parse.UE4.Readers;
 using CUE4Parse.UE4.Versions;
 using CUE4Parse.Utils;
@@ -66,9 +65,8 @@ public class HybridFileProvider : AbstractVfsFileProvider
 
             if (loadOnDemand && extension is "uondemandtoc")
             {
-                var archive = new FByteArchive(file.FullName, File.ReadAllBytes(file.FullName), Versions);
-                var ioChunkToc = new FOnDemandTocReader(archive);
-                RegisterVfs(ioChunkToc);
+                var ioChunkToc = new IoChunkToc(file.FullName);
+                RegisterVfs(ioChunkToc, OnDemandOptions);
             }
         }
     }
@@ -94,7 +92,6 @@ public class HybridFileProvider : AbstractVfsFileProvider
 
             if (extension is "uondemandtoc")
             {
-                
                 var targetPath = Path.Combine(targetCacheDirectory, file.FileName.SubstringAfterLast("/"));
                 if (!File.Exists(targetPath))
                 {
@@ -102,9 +99,8 @@ public class HybridFileProvider : AbstractVfsFileProvider
                     file.GetStream().CopyTo(fileStream);
                 }
                 
-                var archive = new FByteArchive(targetPath, File.ReadAllBytes(targetPath), Versions);
-                var ioChunkToc = new FOnDemandTocReader(archive);
-                RegisterVfs(ioChunkToc);
+                var ioChunkToc = new IoChunkToc(targetPath);
+                RegisterVfs(ioChunkToc, OnDemandOptions);
             }
 
         }
