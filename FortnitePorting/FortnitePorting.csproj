@@ -59,11 +59,6 @@
         <ProjectReference Include="..\Dependencies\FluentAvalonia.BreadcrumbBar\FluentAvalonia.BreadcrumbBar\FluentAvalonia.BreadcrumbBar.csproj" />
     </ItemGroup>
 
-" <ItemGroup>
-        <EmbeddedResource Include="Views\Emojis.json" />
-    </ItemGroup>
-"
-
     <PropertyGroup>
         <PublishSingleFile>true</PublishSingleFile>
         <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>

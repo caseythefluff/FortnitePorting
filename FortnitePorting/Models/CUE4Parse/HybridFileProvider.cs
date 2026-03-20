@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using CUE4Parse.FileProvider.Vfs;
 using CUE4Parse.UE4.IO;
+using CUE4Parse.UE4.IO.OnDemand;
 using CUE4Parse.UE4.Readers;
 using CUE4Parse.UE4.Versions;
 using CUE4Parse.Utils;
@@ -54,7 +55,6 @@ public class HybridFileProvider : AbstractVfsFileProvider
 
     public void RegisterFiles(DirectoryInfo directory)
     {
-        var loadOnDemand = AppSettings.Installation.CurrentProfile.UseTextureStreaming;
         foreach (var file in directory.EnumerateFiles("*.*", EnumerationOptions))
         {
             var extension = file.Extension.SubstringAfter('.').ToLower();
@@ -63,10 +63,11 @@ public class HybridFileProvider : AbstractVfsFileProvider
                 RegisterVfs(file.FullName, [ file.OpenRead() ], it => new FStreamArchive(it, File.OpenRead(it), Versions));
             }
 
-            if (loadOnDemand && extension is "uondemandtoc")
+            if (extension is "uondemandtoc")
             {
-                var ioChunkToc = new IoChunkToc(file.FullName);
-                RegisterVfs(ioChunkToc, OnDemandOptions);
+                var archive = new FByteArchive(file.FullName, File.ReadAllBytes(file.FullName), Versions);
+                var ioChunkToc = new FOnDemandTocReader(archive);
+                RegisterVfs(ioChunkToc);
             }
         }
     }
@@ -92,6 +93,7 @@ public class HybridFileProvider : AbstractVfsFileProvider
 
             if (extension is "uondemandtoc")
             {
+                
                 var targetPath = Path.Combine(targetCacheDirectory, file.FileName.SubstringAfterLast("/"));
                 if (!File.Exists(targetPath))
                 {
@@ -99,8 +101,9 @@ public class HybridFileProvider : AbstractVfsFileProvider
                     file.GetStream().CopyTo(fileStream);
                 }
                 
-                var ioChunkToc = new IoChunkToc(targetPath);
-                RegisterVfs(ioChunkToc, OnDemandOptions);
+                var archive = new FByteArchive(targetPath, File.ReadAllBytes(targetPath), Versions);
+                var ioChunkToc = new FOnDemandTocReader(archive);
+                RegisterVfs(ioChunkToc);
             }
 
         }
