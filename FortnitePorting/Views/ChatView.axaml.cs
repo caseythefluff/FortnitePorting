@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.IO;
 using System.Linq;
+using System.Text.Json;
 using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
@@ -23,24 +24,22 @@ namespace FortnitePorting.Views;
 
 public partial class ChatView : ViewBase<ChatViewModel>
 {
-    private const double AutoScrollThreshold = 1500;
+    private const double AutoScrollThreshold = 400;
     private const double LoadMoreThreshold = 200;
-    private const int MentionPageSize = 8;
 
     private bool _shouldAutoScroll = true;
     private bool _didInitialScroll = false;
     private bool _isLoadingMore = false;
-    private int _mentionStart = -1;
+
+    // Diccionario de categorías → lista de emojis
+    private Dictionary<string, List<string>> _emojiCategories = new();
 
     public ChatView()
     {
         InitializeComponent();
         ViewModel.ImageFlyout = ImageFlyout;
 
-        ViewModel.TextBox = TextBox;
         TextBox.AddHandler(KeyDownEvent, OnTextKeyDown, RoutingStrategies.Tunnel);
-        TextBox.TextChanged += OnTextBoxTextChanged;
-        MentionList.SelectionChanged += OnMentionSelectionChanged;
 
         Scroll.LayoutUpdated += (sender, args) =>
         {
@@ -73,10 +72,8 @@ public partial class ChatView : ViewBase<ChatViewModel>
 
         Chat.MessageReceived += (sender, args) =>
         {
-            TaskService.RunDispatcher(async () =>
+            TaskService.RunDispatcher(() =>
             {
-                await Task.Delay(50); // short delay to account for image load
-
                 var distanceFromBottom = Scroll.Extent.Height - Scroll.Viewport.Height - Scroll.Offset.Y;
                 _shouldAutoScroll = distanceFromBottom <= AutoScrollThreshold;
 
@@ -88,9 +85,23 @@ public partial class ChatView : ViewBase<ChatViewModel>
         };
     }
 
+    protected override void OnLoaded(RoutedEventArgs e)
+    {
+        base.OnLoaded(e);
+
+        Scroll.ScrollToEnd();
+        TextBox.Focus();
+        ViewModel.ClearNewMessageIndicator();
+
+        _didInitialScroll = false;
+
+        LoadEmojiCategories();
+    }
+
     private async Task LoadMoreMessages()
     {
         if (_isLoadingMore) return;
+
         _isLoadingMore = true;
 
         try
@@ -103,8 +114,12 @@ public partial class ChatView : ViewBase<ChatViewModel>
             if (loaded)
             {
                 await Task.Delay(50);
-                var heightDifference = Scroll.Extent.Height - previousExtentHeight;
-                Scroll.Offset = Scroll.Offset.WithY(previousOffset + heightDifference);
+
+                var newExtentHeight = Scroll.Extent.Height;
+                var heightDifference = newExtentHeight - previousExtentHeight;
+                var newOffset = previousOffset + heightDifference;
+
+                Scroll.Offset = Scroll.Offset.WithY(newOffset);
             }
         }
         finally
@@ -113,148 +128,91 @@ public partial class ChatView : ViewBase<ChatViewModel>
         }
     }
 
-    private int FindMentionStart(string text, int caretIndex)
+    // ============================================================
+    //                      EMOJI PICKER
+    // ============================================================
+
+    private void LoadEmojiCategories()
     {
-        for (var i = caretIndex - 1; i >= 0; i--)
+        try
         {
-            switch (text[i])
+            var baseDir = AppContext.BaseDirectory;
+            string? filePath = null;
+            var dir = baseDir;
+
+            while (dir != null)
             {
-                case '@':
+                var candidate = Path.Combine(dir, "Views", "Emojis.json");
+                if (File.Exists(candidate))
                 {
-                    var isLeftValid = i == 0 || text[i - 1] == ' ' || text[i - 1] == '\n';
-                    return isLeftValid ? i : -1;
+                    filePath = candidate;
+                    break;
                 }
-                case ' ':
-                case '\n':
-                    return -1;
+
+                dir = Directory.GetParent(dir)?.FullName;
             }
-        }
 
-        return -1;
+            if (filePath is null)
+                return;
+
+            var json = File.ReadAllText(filePath);
+
+            _emojiCategories = JsonSerializer.Deserialize<Dictionary<string, List<string>>>(json)
+                               ?? new Dictionary<string, List<string>>();
+
+            // Asignar categorías a los grids
+            if (_emojiCategories.TryGetValue("People", out var people))
+                EmojiPeopleGrid.ItemsSource = people;
+            
+            if (_emojiCategories.TryGetValue("Animals", out var animals))
+                EmojiAnimalsGrid.ItemsSource = animals;
+
+            if (_emojiCategories.TryGetValue("Nature", out var nature))
+                EmojiNatureGrid.ItemsSource = nature;
+
+            if (_emojiCategories.TryGetValue("Food", out var food))
+                EmojiFoodGrid.ItemsSource = food;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine("Error cargando Emojis.json: " + ex);
+        }
     }
 
-    private void UpdateMentionPopup()
+    private void EmojiButton_Click(object? sender, RoutedEventArgs e)
     {
-        var text = TextBox.Text ?? string.Empty;
-        var caret = TextBox.CaretIndex;
+        EmojiPopup.IsOpen = !EmojiPopup.IsOpen;
+    }
 
-        _mentionStart = FindMentionStart(text, caret);
-
-        if (_mentionStart < 0)
-        {
-            CloseMentionPopup();
+    private void OnEmojiClicked(object? sender, RoutedEventArgs e)
+    {
+        if (sender is not Button button)
             return;
-        }
 
-        var query = text.Substring(_mentionStart + 1, caret - _mentionStart - 1).ToLowerInvariant();
-        var isStaff = ViewModel.Chat.SupaBase.UserInfo?.Role >= ESupabaseRole.Staff;
-
-        List<string> matchList;
-        if (string.IsNullOrEmpty(query))
-        {
-            var onlineUsers = ViewModel.Chat.Users
-                .Select(kvp => $"@{kvp.Value.UserName}")
-                .Take(MentionPageSize)
-                .ToList();
-
-            matchList = isStaff
-                ? onlineUsers.Append("@everyone").ToList()
-                : onlineUsers;
-        }
-        else
-        {
-            matchList = ViewModel.Chat.UserMentionNames
-                .Where(n => n.TrimStart('@').StartsWith(query, StringComparison.InvariantCultureIgnoreCase))
-                .ToList();
-        }
-
-        if (matchList.Count == 0)
-        {
-            CloseMentionPopup();
+        var emoji = button.Content?.ToString();
+        if (emoji is null)
             return;
-        }
 
-        MentionList.ItemsSource = matchList;
-        MentionList.SelectedIndex = 0;
-        MentionPopup.IsOpen = true;
-    }
-
-    private void CloseMentionPopup()
-    {
-        MentionPopup.IsOpen = false;
-        _mentionStart = -1;
-    }
-
-    private void CommitMention(string mention)
-    {
-        if (_mentionStart < 0) return;
-
-        var text = TextBox.Text ?? string.Empty;
-        var caret = TextBox.CaretIndex;
-
-        var before = text[.._mentionStart];
-        var after = text[caret..];
-        var inserted = mention + " ";
-
-        TextBox.Text = before + inserted + after;
-        TextBox.CaretIndex = before.Length + inserted.Length;
-
-        CloseMentionPopup();
-    }
-
-    private void OnTextBoxTextChanged(object? sender, TextChangedEventArgs e)
-    {
-        var text = TextBox.Text ?? string.Empty;
-
-        if (string.IsNullOrWhiteSpace(text))
+        if (TextBox.GetVisualDescendants().FirstOrDefault(x => x is TextBox) is TextBox tb)
         {
-            TaskService.Run(async () =>
-            {
-                ViewModel.Chat.Presence.IsTyping = false;
-                await ViewModel.Chat.ChatPresence.Track(ViewModel.Chat.Presence);
-            });
+            var caret = tb.CaretIndex;
+            tb.Text = tb.Text.Insert(caret, emoji);
+            tb.CaretIndex = caret + emoji.Length;
         }
 
-        UpdateMentionPopup();
+        EmojiPopup.IsOpen = false;
     }
+
+    // ============================================================
+    //                      INPUT DE TEXTO
+    // ============================================================
 
     public void OnTextKeyDown(object? sender, KeyEventArgs e)
     {
-        if (sender is not TextBox textBox) return;
-        var text = textBox.Text ?? string.Empty;
+        if (sender is not AutoCompleteBox autoCompleteBox) return;
+        if (autoCompleteBox.GetVisualDescendants().FirstOrDefault(x => x is TextBox) is not TextBox textBox) return;
+        if (textBox.Text is not { } text) return;
         if (string.IsNullOrWhiteSpace(text) && !ImageFlyout.IsOpen) return;
-
-        if (MentionPopup.IsOpen)
-        {
-            if (e.Key == Key.Down)
-            {
-                MentionList.SelectedIndex = Math.Min(MentionList.SelectedIndex + 1, MentionList.ItemCount - 1);
-                e.Handled = true;
-                return;
-            }
-
-            if (e.Key == Key.Up)
-            {
-                MentionList.SelectedIndex = Math.Max(MentionList.SelectedIndex - 1, 0);
-                e.Handled = true;
-                return;
-            }
-
-            if (e.Key is Key.Tab || (e.Key == Key.Enter && !e.KeyModifiers.HasFlag(KeyModifiers.Shift)))
-            {
-                if (MentionList.SelectedItem is string chosen)
-                    CommitMention(chosen);
-                e.Handled = true;
-                return;
-            }
-
-            if (e.Key == Key.Escape)
-            {
-                CloseMentionPopup();
-                e.Handled = true;
-                return;
-            }
-        }
 
         if (e.Key == Key.Enter && !e.KeyModifiers.HasFlag(KeyModifiers.Shift))
         {
@@ -269,9 +227,11 @@ public partial class ChatView : ViewBase<ChatViewModel>
                 text = @"¯\_(ツ)_/¯";
 
             var shouldUploadImage = ImageFlyout.IsOpen;
+
             TaskService.Run(async () =>
             {
                 string? imagePath = null;
+
                 if (shouldUploadImage)
                 {
                     var imageBucket = SupaBase.Client.Storage.From("chat-images");
@@ -293,14 +253,15 @@ public partial class ChatView : ViewBase<ChatViewModel>
                     }
                 }
 
-                await Chat.SendMessage(Chat.ConvertMentionsToIds(text), replyId: ViewModel.ReplyMessage?.Id,
+                await Chat.SendMessage(Chat.ConvertMentionsToIds(text),
+                    replyId: ViewModel.ReplyMessage?.Id,
                     imagePath: imagePath);
+
                 ViewModel.ReplyMessage = null;
             });
 
             textBox.Text = string.Empty;
             ImageFlyout.IsOpen = false;
-            CloseMentionPopup();
             Scroll.ScrollToEnd();
             e.Handled = true;
         }
@@ -314,6 +275,7 @@ public partial class ChatView : ViewBase<ChatViewModel>
         if (e.Key != Key.Enter)
         {
             var isTyping = !string.IsNullOrWhiteSpace(textBox.Text);
+
             TaskService.Run(async () =>
             {
                 if (ViewModel.Chat.Presence.IsTyping != isTyping)
@@ -325,28 +287,9 @@ public partial class ChatView : ViewBase<ChatViewModel>
         }
     }
 
-    private void OnMentionListPointerPressed(object? sender, PointerPressedEventArgs e)
-    {
-        if (sender is not ListBox lb) return;
-        if (lb.SelectedItem is not string chosen) return;
-        CommitMention(chosen);
-        e.Handled = true;
-        TextBox.Focus();
-    }
-
-    private void OnMentionSelectionChanged(object? sender, SelectionChangedEventArgs e)
-    {
-        TextBox.Focus();
-    }
-    
-    protected override void OnLoaded(RoutedEventArgs e)
-    {
-        base.OnLoaded(e);
-        Scroll.ScrollToEnd();
-        TextBox.Focus();
-        ViewModel.ClearNewMessageIndicator();
-        _didInitialScroll = false;
-    }
+    // ============================================================
+    //                      OTROS HANDLERS
+    // ============================================================
 
     private void OnUserPressed(object? sender, PointerPressedEventArgs e)
     {
@@ -369,6 +312,7 @@ public partial class ChatView : ViewBase<ChatViewModel>
     {
         if (sender is not Control control) return;
         if (control.DataContext is not ChatMessage message) return;
+
         TaskService.Run(async () => await Api.FortnitePorting.DeleteMessage(message.Id));
     }
 
@@ -378,10 +322,11 @@ public partial class ChatView : ViewBase<ChatViewModel>
         FlyoutBase.ShowAttachedFlyout(control);
     }
 
-    private async void OnReplyPressed(object? sender, PointerPressedEventArgs e)
+    private void OnReplyPressed(object? sender, PointerPressedEventArgs e)
     {
         if (sender is not Control control) return;
         if (control.DataContext is not ChatMessage chatMessage) return;
+
         ViewModel.ReplyMessage = chatMessage;
     }
 
@@ -389,6 +334,7 @@ public partial class ChatView : ViewBase<ChatViewModel>
     {
         if (sender is not Control control) return;
         if (control.DataContext is not ChatMessage message) return;
+
         message.IsEditing = !message.IsEditing;
     }
 
@@ -400,8 +346,12 @@ public partial class ChatView : ViewBase<ChatViewModel>
         if (e.Key == Key.Enter && !e.KeyModifiers.HasFlag(KeyModifiers.Shift))
         {
             message.IsEditing = false;
+
             var newText = textBox.Text!;
-            TaskService.Run(async () => await Chat.UpdateMessage(message, newText));
+            TaskService.Run(async () =>
+            {
+                await Chat.UpdateMessage(message, newText);
+            });
         }
         else if (e.Key == Key.Enter && e.KeyModifiers.HasFlag(KeyModifiers.Shift))
         {
@@ -419,7 +369,24 @@ public partial class ChatView : ViewBase<ChatViewModel>
     {
         if (sender is not Control control) return;
         if (control.DataContext is not ChatMessage message) return;
+
         App.Clipboard.SetTextAsync(message.Text);
+    }
+
+    private void OnTextBoxTextChanged(object? sender, TextChangedEventArgs e)
+    {
+        if (sender is not AutoCompleteBox autoCompleteBox) return;
+        if (autoCompleteBox.GetVisualDescendants().FirstOrDefault(x => x is TextBox) is not TextBox textBox) return;
+        if (textBox.Text is not { } text) return;
+
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            TaskService.Run(async () =>
+            {
+                ViewModel.Chat.Presence.IsTyping = false;
+                await ViewModel.Chat.ChatPresence.Track(ViewModel.Chat.Presence);
+            });
+        }
     }
 
     private void OnNewMessageIndicatorPressed(object? sender, PointerPressedEventArgs e)
