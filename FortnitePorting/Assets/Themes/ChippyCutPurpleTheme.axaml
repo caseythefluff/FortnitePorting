@@ -1,0 +1,72 @@
+<controls:FPStyles xmlns="https://github.com/avaloniaui"
+                   xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                   xmlns:controls="clr-namespace:FortnitePorting.Controls">
+    <controls:FPStyles.Resources>
+        <Brush x:Key="FPSeparatorColorLayer1">#1E1B26</Brush>
+        <Brush x:Key="FPSeparatorColorLayer2">#2D263F</Brush>
+
+        <Brush x:Key="FPButtonBackground">#201A2E</Brush>
+        <Brush x:Key="FPButtonBackgroundPointerOver">#5E236B</Brush>
+        <Brush x:Key="FPButtonBackgroundPressed">#6E2A80</Brush>
+        <Brush x:Key="FPButtonBorderBrush">#582870</Brush>
+
+        <Brush x:Key="FPLayer2">#28203A</Brush>
+        <Brush x:Key="FPLayer2PointerOver">#50306C</Brush>
+        <Brush x:Key="FPLayer2Pressed">#8f0296</Brush>
+
+        <Brush x:Key="FPButtonBackgroundSelected">#582870</Brush>
+        <Brush x:Key="FPButtonBackgroundSelectedPointerOver">#8620bd</Brush>
+
+        <Brush x:Key="FPButtonBackgroundBright">#3E2E5B</Brush>
+        <Brush x:Key="FPButtonBackgroundBrightPointerOver">#8443A0</Brush>
+
+        <LinearGradientBrush x:Key="FPContentCardBackground" StartPoint="0%, 0%" EndPoint="0%, 100%" Opacity="0.75">
+            <GradientStops>
+                <GradientStop Color="#1D1227" Offset="0"/>
+                <GradientStop Color="#1F1427" Offset="1"/>
+            </GradientStops>
+        </LinearGradientBrush>
+        
+        <LinearGradientBrush x:Key="FPPopupContentCardBackground" StartPoint="0%, 0%" EndPoint="0%, 100%">
+            <GradientStops>
+                <GradientStop Color="#371F42" Offset="0"/>
+                <GradientStop Color="#2C1C35" Offset="1"/>
+            </GradientStops>
+        </LinearGradientBrush>
+        
+        <LinearGradientBrush x:Key="FPContentCardBackgroundBright" StartPoint="0%, 0%" EndPoint="0%, 100%">
+            <GradientStops>
+                <GradientStop Color="#3D2846" Offset="0"/>
+                <GradientStop Color="#2F2437" Offset="1"/>
+            </GradientStops>
+        </LinearGradientBrush>
+
+        <SolidColorBrush x:Key="TextFillPrimaryBrush" Color="#FAE6FF" />
+        <SolidColorBrush x:Key="TextFillPrimaryDisabledBrush" Color="#80FAE6FF" />
+
+        <SolidColorBrush x:Key="TextFillSecondaryBrush" Color="#DCAEE6" />
+        <SolidColorBrush x:Key="TextFillSecondaryDisabledBrush" Color="#80DCAEE6" />
+
+        <SolidColorBrush x:Key="TextFillTertiaryBrush" Color="#B07EA5" />
+        <SolidColorBrush x:Key="TextFillTertiaryDisabledBrush" Color="#80B07EA5" />
+        
+        <Bitmap x:Key="WorldGridBitmap">avares://FortnitePorting/Assets/WorldGridTile.png</Bitmap>
+        <ImageBrush x:Key="ContentBorderBackgroundBrush" Opacity="0.25" Stretch="Fill" Source="{DynamicResource WorldGridBitmap}" />
+
+        <SolidColorBrush x:Key="WindowBackgroundBrush" Color="#110B19" />
+        <SolidColorBrush x:Key="ContentBorderBorderBrush" Color="#352445" />
+        
+        <SolidColorBrush x:Key="ContentBorderLayer2BackgroundBrush" Color="#100A16" />
+        <SolidColorBrush x:Key="ContentBorderLayer2BorderBrush" Color="#251A32" />
+
+        <SolidColorBrush x:Key="DialogOverlayBackgroundBrush" Color="#80150020" />
+        <SolidColorBrush x:Key="BroadcastOverlayBackgroundBrush" Color="#80150020" />
+        
+        <SolidColorBrush x:Key="FPTitleTextBrush" Color="#F0D9FF" /> 
+        
+        <Color x:Key="FPAccentColor">#8f0296</Color>
+        <SolidColorBrush x:Key="FPAccentBrush" Color="{DynamicResource FPAccentColor}" />
+        
+        <Bitmap x:Key="FPLogoBitmap">avares://FortnitePorting/Assets/LogoRebrand_Chip.png</Bitmap>
+    </controls:FPStyles.Resources>
+</controls:FPStyles>
